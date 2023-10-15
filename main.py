@@ -57,15 +57,35 @@ def add_client(conn, first_name, last_name, email, phones=None):
             for phone in phones:
                 cur.execute("""
                     INSERT INTO phones (client_id,phone) 
-                    VALUES  (%s,%s)
+                    VALUES (%s,%s)
                     RETURNING phone_id;
                     """, (client_id, phone))
                 phone_id = cur.fetchone()[0]
                 print(f"Добавлена запись в таблицу Phones: ID {phone_id}")
 
 
+# Функция, позволяющая добавить телефон для существующего клиента
+def add_phone(conn, client_id, phone):
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT * FROM clients
+            WHERE client_id = %s;
+        """, (client_id,))
+        if cur.fetchone():
+            cur.execute("""
+                INSERT INTO phones (client_id, phone)
+                VALUES (%s,%s)
+                RETURNING phone_id;
+            """, (client_id, phone))
+            phone_id = cur.fetchone()[0]
+            print(f"Добавлена запись в таблицу Phones: ID {phone_id}")
+        else:
+            print(f"Клиента с ID {client_id} не существует")
+
+
 with psycopg2.connect(database="clients_db", user="postgres", password="461995") as conn:
     drop_db(conn)
     create_db(conn)
-    add_client(conn, "Влада", "Коинова", "vlada@mail.ru",["88552543264", "89172314545"])
+    add_client(conn, "Влада", "Коинова", "vlada@mail.ru", ["88552543264", "89172314545"])
+    add_phone(conn, "1", "5")
 conn.close()

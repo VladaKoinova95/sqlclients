@@ -1,5 +1,6 @@
 import psycopg2
 
+
 def drop_db(conn):
     with conn.cursor() as cur:
         cur.execute("DROP TABLE IF EXISTS phones;")
@@ -7,7 +8,8 @@ def drop_db(conn):
         cur.execute("DROP TABLE IF EXISTS clients;")
     conn.commit()
 
-#Функция, создающая структуру БД (таблицы)
+
+# Функция, создающая структуру БД (таблицы)
 def create_db(conn):
     with conn.cursor() as cur:
         cur.execute("""
@@ -33,7 +35,37 @@ def create_db(conn):
             """)
         conn.commit()
 
+
+# Функция, позволяющая добавить нового клиента
+def add_client(conn, first_name, last_name, email, phones=None):
+    with conn.cursor() as cur:
+        cur.execute("""
+            INSERT INTO clients (first_name, last_name) 
+            VALUES  (%s,%s)
+            RETURNING client_id, first_name;
+            """, (first_name, last_name))
+        client_id = cur.fetchone()[0]
+        print(f"Добавлена запись в таблицу Clients: ID {client_id}")
+        cur.execute("""
+            INSERT INTO emails (client_id,email) 
+            VALUES  (%s,%s)
+            RETURNING email_id;
+            """, (client_id, email))
+        email_id = cur.fetchone()[0]
+        print(f"Добавлена запись в таблицу Emails: ID {email_id}")
+        if phones:
+            for phone in phones:
+                cur.execute("""
+                    INSERT INTO phones (client_id,phone) 
+                    VALUES  (%s,%s)
+                    RETURNING phone_id;
+                    """, (client_id, phone))
+                phone_id = cur.fetchone()[0]
+                print(f"Добавлена запись в таблицу Phones: ID {phone_id}")
+
+
 with psycopg2.connect(database="clients_db", user="postgres", password="461995") as conn:
     drop_db(conn)
     create_db(conn)
+    add_client(conn, "Влада", "Коинова", "vlada@mail.ru",["88552543264", "89172314545"])
 conn.close()

@@ -55,14 +55,14 @@ def add_client(conn, first_name, last_name, email, phones=None):
             RETURNING client_id, first_name;
             """, (first_name, last_name))
         client_id = cur.fetchone()[0]
-        print(f"Добавлена запись в таблицу Clients: ID {client_id}")
+        print(f"Добавлена запись в таблицу Clients: ID {client_id}, {first_name} {last_name}")
         cur.execute("""
             INSERT INTO emails (client_id,email) 
             VALUES  (%s,%s)
             RETURNING email_id;
             """, (client_id, email))
         email_id = cur.fetchone()[0]
-        print(f"Добавлена запись в таблицу Emails: ID {email_id}")
+        print(f"Добавлена запись в таблицу Emails: ID {email_id}, {email}")
         if phones:
             for phone in phones:
                 cur.execute("""
@@ -71,7 +71,7 @@ def add_client(conn, first_name, last_name, email, phones=None):
                     RETURNING phone_id;
                     """, (client_id, phone))
                 phone_id = cur.fetchone()[0]
-                print(f"Добавлена запись в таблицу Phones: ID {phone_id}")
+                print(f"Добавлена запись в таблицу Phones: ID {phone_id}, {phone}")
 
 
 # Функция, позволяющая добавить телефон для существующего клиента
@@ -84,12 +84,12 @@ def add_phone(conn, client_id, phone):
                 RETURNING phone_id;
             """, (client_id, phone))
             phone_id = cur.fetchone()[0]
-            print(f"Добавлена запись в таблицу Phones: ID {phone_id}")
+            print(f"Добавлена запись в таблицу Phones: ID {phone_id}, {phone}")
     else:
         print(f"Клиента с ID {client_id} не существует")
 
 
-#Функция, позволяющая удалить телефон для существующего клиента
+# Функция, позволяющая удалить телефон для существующего клиента
 def delete_phone(conn, client_id, phone):
     if check_id(conn, client_id):
         with conn.cursor() as cur:
@@ -97,11 +97,17 @@ def delete_phone(conn, client_id, phone):
                 SELECT * FROM phones
                 WHERE client_id = %s AND phone = %s;
             """, (client_id, phone))
-            print(cur.fetchall())
+            for el in cur.fetchall():
+                cur.execute("""
+                    DELETE FROM phones
+                    WHERE phone_id = %s;
+                """, (el[0],))
+                print(f"Удалена запись в таблице Phones: ID {el[0]},{phone}")
     else:
         print(f"Клиента с ID {client_id} не существует")
 
-#Функция, позволяющая удалить существующего клиента
+
+# Функция, позволяющая удалить существующего клиента
 def delete_client(conn, client_id):
     if check_id(conn, client_id):
         with conn.cursor() as cur:
@@ -118,8 +124,9 @@ def delete_client(conn, client_id):
 with psycopg2.connect(database="clients_db", user="postgres", password="461995") as conn:
     drop_db(conn)
     create_db(conn)
-    add_client(conn, "Влада", "Коинова", "vlada@mail.ru", ["88552543264", "88552543264"])
+    add_client(conn, "Влада", "Коинова", "vlada@mail.ru", ["574589", "88552543264"])
     add_client(conn, "Роман", "Блинов", "oleg@mail.ru", ["589646"])
-    delete_client(conn, "1")
+    #delete_client(conn, "1")
+    delete_phone(conn, "1", "88552543264")
     #add_phone(conn, "2", "5")
 conn.close()

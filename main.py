@@ -97,10 +97,11 @@ def change_client(conn, client_id, first_name=None, last_name=None, email=None, 
                     UPDATE clients 
                     SET first_name = COALESCE(%s, first_name),
                     last_name = COALESCE(%s, last_name)
-                    WHERE client_id = %s;
+                    WHERE client_id = %s
+                    RETURNING first_name, last_name;
                 """, (first_name, last_name, client_id))
                 if cur.rowcount:
-                    print(f"Обновлена запись в таблице Clients: ID {client_id}, {first_name}, {last_name}")
+                    print(f"Обновлена запись в таблице Clients: ID {client_id}, {cur.fetchone()}")
             if email:
                 cur.execute("""
                     UPDATE emails
@@ -187,4 +188,20 @@ def find_client(conn, first_name=None, last_name=None, email=None, phone=None):
 with psycopg2.connect(database="clients_db", user="postgres", password="461995") as conn:
     drop_db(conn)
     create_db(conn)
+    add_client(conn,"Влада", "Коинова", "vlada@mail.ru", ["543211","89179172200"])
+    add_client(conn,"Андрей", "Иванов", "ivanov@yandex.ru", ["89603204568"])
+    add_client(conn, "Андрей", "Некрасов", "an1994@mail.ru")
+    add_client(conn, "Оля", "Краснова", "olya@mail.ru", ["777"])
+    add_client(conn, "Михаил", "Ибрагимов", "mi_boss@mail.ru")
+    add_phone(conn, "2", "543264")
+    add_phone(conn, "3", "89176204532")
+    delete_phone(conn, "4", "777")
+    delete_client(conn, "5")
+    delete_client(conn, "8")
+    change_client(conn, "4", last_name="Воронина", email="voroninaolya@mail.ru")
+    change_client(conn, "2", phone_id="3", phone="89603204567")
+    print(find_client(conn, first_name="Андрей"))
+    print(find_client(conn, email="vlada@mail.ru"))
+    print(find_client(conn, first_name="Андрей", phone="543264"))
+    print(find_client(conn, first_name="Марина"))
 conn.close()

@@ -88,6 +88,39 @@ def add_phone(conn, client_id, phone):
     else:
         print(f"Клиента с ID {client_id} не существует")
 
+# Функция, позволяющая изменить данные о клиенте
+def change_client(conn, client_id, first_name=None, last_name=None, email=None, phone_id=None, phone=None):
+    if check_id(conn, client_id):
+        with conn.cursor() as cur:
+            if first_name or last_name:
+                cur.execute("""
+                    UPDATE clients 
+                    SET first_name = COALESCE(%s, first_name),
+                    last_name = COALESCE(%s, last_name)
+                    WHERE client_id = %s;
+                """, (first_name, last_name, client_id))
+                if cur.rowcount:
+                    print(f"Обновлена запись в таблице Clients: ID {client_id}, {first_name}, {last_name}")
+            if email:
+                cur.execute("""
+                    UPDATE emails
+                    SET email = %s
+                    WHERE client_id = %s
+                    RETURNING email_id;
+                """, (email, client_id))
+                if cur.rowcount:
+                    print(f"Обновлена запись в таблице Emails: ID {cur.fetchone()[0]}, {email}")
+            if phone_id and phone:
+                cur.execute("""
+                    UPDATE phones
+                    SET phone = %s
+                    WHERE phone_id = %s AND client_id = %s;
+                """, (phone, phone_id,client_id))
+                if cur.rowcount:
+                    print(f"Обновлена запись в таблице Phones: ID {phone_id}, {phone}")
+    else:
+        print(f"Клиента с ID {client_id} не существует")
+
 
 # Функция, позволяющая удалить телефон для существующего клиента
 def delete_phone(conn, client_id, phone):
@@ -121,12 +154,37 @@ def delete_client(conn, client_id):
         print(f"Клиента с ID {client_id} не существует")
 
 
+# Функция, позволяющая найти клиента по его данным: имени, фамилии, email или телефону
+def find_client(conn, first_name=None, last_name=None, email=None, phone=None):
+    where_values = []
+    values = []
+    if first_name:
+        where_values.append('first_name = %s')
+        values.append(first_name)
+    if last_name:
+        where_values.append('last_name = %s')
+        values.append(last_name)
+    if email:
+        where_values.append('email = %s')
+        values.append(email)
+    if phone:
+        where_values.append("phone = %s")
+        values.append(phone)
+    if len(where_values) == 0:
+        return []
+    query = (f"""
+        SELECT DISTINCT c.client_id, first_name, last_name FROM clients c
+        LEFT JOIN emails e on c.client_id = e.client_id
+        LEFT JOIN phones p on c.client_id = p.client_id
+        WHERE {' AND '.join(where_values)}
+    """)
+    with conn.cursor() as cur:
+        cur.execute(query, tuple(values))
+        rows = cur.fetchall()
+        return rows
+
+
 with psycopg2.connect(database="clients_db", user="postgres", password="461995") as conn:
     drop_db(conn)
     create_db(conn)
-    add_client(conn, "Влада", "Коинова", "vlada@mail.ru", ["574589", "88552543264"])
-    add_client(conn, "Роман", "Блинов", "oleg@mail.ru", ["589646"])
-    #delete_client(conn, "1")
-    delete_phone(conn, "1", "88552543264")
-    #add_phone(conn, "2", "5")
 conn.close()
